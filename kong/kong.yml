@@ -1,0 +1,136 @@
+
+
+
+# _format_version: "3.0"
+
+# services:
+#   - name: backend
+#     url: http://backend:8000
+#     routes:
+#       - name: backend-route
+#         paths:
+#           - /api
+#         strip_path: false
+#     plugins:
+#       - name: oauth2
+#         config:
+#           scopes:
+#             - read_accounts
+#             - read_transactions
+#             - loan_evaluation
+#           mandatory_scope: true
+#           enable_authorization_code: true
+#           global_credentials: true
+#           provision_key: provision123
+#           token_expiration: 3600
+#           accept_http_if_already_terminated: true
+
+
+# consumers:
+#   - username: fintrust-user
+#     custom_id: user-001
+#     oauth2_credentials:
+#       - name: kong-client
+#         client_id: kong-client
+#         client_secret: kong-secret
+#         redirect_uris:
+#           - http://localhost:3000/cb
+
+
+
+
+# _format_version: "3.0"
+
+# services:
+#   - name: backend
+#     url: http://backend:8000
+#     routes:
+#       - name: backend-route
+#         paths:
+#           - /api
+#         strip_path: false
+#         plugins:
+#           - name: cors
+#             config:
+#               origins:
+#                 - http://localhost:3000
+#               methods:
+#                 - GET
+#                 - POST
+#                 - OPTIONS
+#               headers:
+#                 - Accept
+#                 - Authorization
+#                 - Content-Type
+#               credentials: true
+#               max_age: 3600
+#           - name: oauth2
+#             config:
+#               scopes:
+#                 - read_accounts
+#                 - read_transactions
+#                 - loan_evaluation
+#               mandatory_scope: true
+#               enable_authorization_code: true
+#               global_credentials: true
+#               provision_key: provision123
+#               token_expiration: 3600
+#               accept_http_if_already_terminated: true
+
+# consumers:
+#   - username: fintrust-user
+#     custom_id: user-001
+#     oauth2_credentials:
+#       - name: kong-client
+#         client_id: kong-client
+#         client_secret: kong-secret
+#         redirect_uris:
+#           - http://localhost:3000/cb
+
+_format_version: "3.0"
+
+services:
+  - name: backend
+    url: http://backend:8000
+    routes:
+      - name: backend-route
+        paths:
+          - /api
+        strip_path: false
+        plugins:
+          - name: cors
+            config:
+              origins:
+                - http://localhost:3000
+              methods:
+                - GET
+                - POST
+                - OPTIONS
+              headers:
+                - Accept
+                - Authorization
+                - Content-Type
+              credentials: true
+              max_age: 3600
+          - name: oauth2
+            config:
+              scopes:
+                - read_accounts
+                - read_transactions
+                - loan_evaluation
+              mandatory_scope: true
+              enable_authorization_code: true
+              global_credentials: true
+              provision_key: provision123
+              token_expiration: 3600
+              accept_http_if_already_terminated: true
+
+consumers:
+  - username: fintrust-user
+    custom_id: user-001
+    oauth2_credentials:
+      - name: kong-client
+        client_id: kong-client
+        client_secret: kong-secret
+        redirect_uris:
+          - http://localhost:3000/cb

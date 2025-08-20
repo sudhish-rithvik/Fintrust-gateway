@@ -1,0 +1,6 @@
+flask==3.0.3
+flask-cors==4.0.0
+tenseal==0.3.16
+cryptography==42.0.5
+pyngrok==7.1.6  # Optional, remove if not using ngrok
+numpy==1.26.4

@@ -1,0 +1,84 @@
+{
+  "realm": "fintrust",
+  "enabled": true,
+  "displayName": "FinTrust",
+  "users": [
+    {
+      "username": "user123",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Fin",
+      "lastName": "User",
+      "email": "user123@example.com",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["user"]
+    },
+    {
+      "username": "loanadmin",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Loan",
+      "lastName": "Officer",
+      "email": "loan@example.com",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminpass",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["loan_officer"]
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "user"
+      },
+      {
+        "name": "loan_officer"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "kong-client",
+      "name": "Kong OAuth2 Client",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "kong-secret",
+      "redirectUris": [
+        "http://localhost:8000/*"
+      ],
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "authorizationServicesEnabled": true,
+      "webOrigins": ["*"],
+      "defaultClientScopes": ["profile", "email"],
+      "optionalClientScopes": ["address", "phone"]
+    },
+    {
+      "clientId": "frontend-client",
+      "name": "Frontend React App",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "redirectUris": [
+        "http://localhost:3000/*"
+      ],
+      "webOrigins": ["*"],
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false
+    }
+  ]
+}

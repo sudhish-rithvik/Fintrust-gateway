@@ -1,66 +1,155 @@
-import os
-import requests
+"""
+Authentication module for FinTrust Gateway
+Simplified for local development (no Keycloak dependency)
+"""
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
+from typing import Optional, List
+import jwt
+import os
+from datetime import datetime, timedelta
 
-# Environment/config
-KEYCLOAK_URL = os.getenv("KEYCLOAK_URL", "http://localhost:8080")
-REALM = os.getenv("KEYCLOAK_REALM", "fintrust")
-CLIENT_ID = os.getenv("KEYCLOAK_CLIENT_ID", "kong-client")
+# Simple JWT configuration for development
+SECRET_KEY = "dev-secret-key-change-in-production"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-# JWKS URI
-JWKS_URL = f"{KEYCLOAK_URL}/realms/{REALM}/protocol/openid-connect/certs"
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+security = HTTPBearer()
 
 class TokenPayload(BaseModel):
     sub: str
-    email: str = None
-    preferred_username: str = None
-    roles: list = []
+    email: Optional[str] = None
+    preferred_username: Optional[str] = None
+    roles: List[str] = []
+    exp: Optional[int] = None
 
-# Cache JWKS
-jwks_cache = {}
+class User(BaseModel):
+    user_id: str
+    username: str
+    email: str
+    roles: List[str] = ["user"]
 
-def get_jwks():
-    global jwks_cache
-    if not jwks_cache:
-        response = requests.get(JWKS_URL)
-        if response.status_code != 200:
-            raise HTTPException(status_code=500, detail="Failed to fetch JWKS")
-        jwks_cache = response.json()
-    return jwks_cache
+# Mock user database for development
+MOCK_USERS = {
+    "user-001": User(user_id="user-001", username="john_doe", email="john@example.com", roles=["user", "account_reader"]),
+    "user-002": User(user_id="user-002", username="jane_smith", email="jane@example.com", roles=["user", "premium"]),
+    "user-003": User(user_id="user-003", username="bob_wilson", email="bob@example.com", roles=["user"]),
+    "admin": User(user_id="admin", username="admin", email="admin@fintrust.com", roles=["admin", "user"])
+}
 
-def decode_token(token: str):
-    jwks = get_jwks()
-    unverified_header = jwt.get_unverified_header(token)
-    kid = unverified_header.get("kid")
-    if not kid:
-        raise HTTPException(status_code=401, detail="Missing 'kid' in token header")
+def create_access_token(user_id: str, additional_claims: dict = None) -> str:
+    """Create JWT access token for development"""
+    user = MOCK_USERS.get(user_id)
+    if not user:
+        raise ValueError("User not found")
 
-    key = next((k for k in jwks["keys"] if k["kid"] == kid), None)
-    if not key:
-        raise HTTPException(status_code=401, detail="Public key not found")
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
 
+    payload = {
+        "sub": user.user_id,
+        "preferred_username": user.username,
+        "email": user.email,
+        "roles": user.roles,
+        "exp": expire,
+        "iat": datetime.utcnow(),
+        "iss": "fintrust-dev"
+    }
+
+    if additional_claims:
+        payload.update(additional_claims)
+
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
+def decode_token(token: str) -> TokenPayload:
+    """Decode and validate JWT token"""
     try:
-        public_key = jwt.construct_rsa_public_key(key)
-        payload = jwt.decode(
-            token,
-            public_key,
-            algorithms=[key["alg"]],
-            audience=CLIENT_ID,
-            options={"verify_exp": True}
-        )
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return TokenPayload(
             sub=payload["sub"],
             email=payload.get("email"),
             preferred_username=payload.get("preferred_username"),
-            roles=payload.get("realm_access", {}).get("roles", [])
+            roles=payload.get("roles", []),
+            exp=payload.get("exp")
         )
-    except JWTError as e:
-        raise HTTPException(status_code=401, detail=f"Invalid token: {str(e)}")
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has expired"
+        )
+    except jwt.JWTError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Invalid token: {str(e)}"
+        )
 
-def get_current_user(token: str = Depends(oauth2_scheme)) -> TokenPayload:
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> TokenPayload:
+    """Get current authenticated user from JWT token"""
+    token = credentials.credentials
     return decode_token(token)
+
+async def get_optional_user(credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))) -> Optional[TokenPayload]:
+    """Get current user if authenticated, otherwise None"""
+    if not credentials:
+        return None
+    return decode_token(credentials.credentials)
+
+def require_roles(required_roles: List[str]):
+    """Dependency to require specific roles"""
+    def role_checker(current_user: TokenPayload = Depends(get_current_user)) -> TokenPayload:
+        if not any(role in current_user.roles for role in required_roles):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Insufficient permissions. Required roles: {required_roles}"
+            )
+        return current_user
+    return role_checker
+
+# Development login endpoint
+from fastapi import APIRouter
+
+auth_router = APIRouter()
+
+@auth_router.post("/login")
+async def dev_login(user_id: str):
+    """Development login endpoint - generates token for any valid user_id"""
+    if user_id not in MOCK_USERS:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    token = create_access_token(user_id)
+    user = MOCK_USERS[user_id]
+
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        "user": {
+            "user_id": user.user_id,
+            "username": user.username,
+            "email": user.email,
+            "roles": user.roles
+        }
+    }
+
+@auth_router.get("/users")
+async def get_available_users():
+    """Development endpoint - list available users for testing"""
+    return {
+        "available_users": [
+            {
+                "user_id": user.user_id,
+                "username": user.username,
+                "email": user.email,
+                "roles": user.roles
+            }
+            for user in MOCK_USERS.values()
+        ],
+        "instructions": "POST /auth/login with user_id to get a token"
+    }
+
+# Export the router to include in main app
+def get_auth_router():
+    return auth_router

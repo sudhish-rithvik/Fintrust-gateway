@@ -4,10 +4,9 @@ Fixed version with proper error handling
 """
 from fastapi import APIRouter, Depends, HTTPException, Request
 from auth import get_current_user, TokenPayload
-from db_fixed import get_db_connection, log_audit_event
+from db import get_db_connection, log_audit_event  # FIXED: removed _fixed
 from typing import List, Dict, Any
 from pydantic import BaseModel
-
 
 router = APIRouter()
 

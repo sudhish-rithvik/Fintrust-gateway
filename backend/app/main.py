@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uvicorn
 from routes import accounts, transactions, loan, audit_log
+from auth import get_auth_router  # ADD THIS
 from db import init_database
 import os
 
@@ -27,6 +28,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include auth router (IMPORTANT!)
+app.include_router(get_auth_router(), prefix="/auth", tags=["Authentication"])
 
 # Include API routers
 app.include_router(accounts.router, prefix="/api/v1", tags=["Accounts"])
@@ -52,7 +56,8 @@ async def root():
         "message": "Welcome to FinTrust Gateway API",
         "version": "1.0.0",
         "docs": "/docs",
-        "health": "/health"
+        "health": "/health",
+        "login": "/auth/login"
     }
 
 # Exception handlers

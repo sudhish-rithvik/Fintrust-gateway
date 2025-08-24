@@ -2,15 +2,11 @@
 FinTrust Gateway - Main FastAPI Application
 Fixed version for local development
 """
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-import uvicorn
+from fastapi.responses import JSONResponse  # ADD THIS LINE
 from routes import accounts, transactions, loan, audit_log
-from auth import get_auth_router  # ADD THIS
-from db import init_database
-import os
-
+from config import settings
 # Initialize FastAPI app
 app = FastAPI(
     title="FinTrust Gateway Backend",

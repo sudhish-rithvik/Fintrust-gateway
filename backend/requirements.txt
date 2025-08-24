@@ -1,19 +1,16 @@
-# FinTrust Gateway Backend Dependencies
-# Core Framework
+# Core framework
 fastapi==0.111.0
 uvicorn[standard]==0.29.0
 
-# HTTP Clients
-requests==2.32.3
+# HTTP client
 httpx==0.27.0
+requests==2.32.3
 
-# Authentication & Security
-python-jose[cryptography]==3.3.0
-python-multipart==0.0.9
-
-# Configuration
+# Environment variables
 python-dotenv==1.0.1
-pydantic-settings==2.4.0
 
-# Development utilities
-python-json-logger==2.0.7
+# JWT and Keycloak integration
+python-jose[cryptography]==3.3.0
+
+# Add these missing dependencies
+pydantic==2.7.4
